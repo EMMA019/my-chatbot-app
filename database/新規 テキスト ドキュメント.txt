@@ -1,0 +1,21 @@
+import sqlite3
+from config.settings import DB_PATH
+from datetime import datetime
+
+def save_long_term_memory(character_name, user_name, topic, memory_text):
+    """長期記憶を保存する（キャラ名・ユーザー名・トピック・内容）"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO long_term_memory (character_name, user_name, topic, memory, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        """, (character_name, user_name, topic, memory_text, datetime.now()))
+
+        conn.commit()
+        print(f"🧠 記憶保存完了: {topic} - {memory_text}")
+    except sqlite3.Error as e:
+        print(f"❌ DB保存エラー: {e}")
+    finally:
+        conn.close()

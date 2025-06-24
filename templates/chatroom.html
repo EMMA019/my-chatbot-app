@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ character.name }}とチャット</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      padding: 1rem;
+      background-color: #1e1e1e;
+      border-bottom: 1px solid #333;
+      text-align: center;
+    }
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .message {
+      margin: 0.5rem 0;
+      padding: 0.7rem 1rem;
+      border-radius: 16px;
+      max-width: 70%;
+      word-break: break-word;
+    }
+    .user {
+      background-color: #4caf50;
+      color: white;
+      align-self: flex-end;
+    }
+    .ai {
+      background-color: #424242;
+      color: white;
+      align-self: flex-start;
+    }
+    .input-area {
+      display: flex;
+      padding: 1rem;
+      background-color: #1e1e1e;
+      border-top: 1px solid #333;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 0.8rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      margin-right: 0.5rem;
+    }
+    .input-area button {
+      background-color: #f06292;
+      color: white;
+      border: none;
+      padding: 0.8rem 1.2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .status-card {
+      padding: 1rem;
+      background-color: #222;
+      border-bottom: 1px solid #333;
+    }
+    .affection-bar-wrapper {
+      width: 100%;
+      height: 12px;
+      background-color: #444;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: inset 0 0 3px #000;
+      margin-top: 4px;
+    }
+    .affection-bar-fill {
+      height: 100%;
+      background: linear-gradient(to right, #ff6aa0, #ff9bd0);
+      transition: width 0.3s ease;
+    }
+    #debug-info {
+      padding: 1rem;
+      background-color: #1a1a1a;
+      border-top: 1px solid #444;
+      font-size: 0.9rem;
+    }
+    #debug-info ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    #debug-info li {
+      margin-left: 1em;
+    }
+    #trait-modal button {
+      margin: 0.5em;
+      padding: 0.6em 1.2em;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      background-color: #f06292;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>💬 {{ character.name }} とチャット</h2>
+  </header>
+
+  <div class="status-card">
+    <p><strong>性格:</strong> <span id="trait-label">{{ character.current_trait }}</span></p>
+    <p><strong>親愛度:</strong> <span id="affection-label">{{ character.affection }} / 100</span></p>
+    <div class="affection-bar-wrapper">
+      <div class="affection-bar-fill" style="width: {{ character.affection }}%;"></div>
+    </div>
+  </div>
+
+  <div class="chat-container" id="chat-log"></div>
+
+  <div class="input-area">
+    <input type="text" id="user-input" placeholder="メッセージを入力" autocomplete="off">
+    <button onclick="sendMessage()">送信</button>
+  </div>
+
+  <div id="debug-info">
+    <p><strong>🧠 感情分析</strong></p>
+    <p>感情: <span id="emotion-label">-</span></p>
+    <p>スコア: <span id="emotion-score">-</span></p>
+    <p>現在の性格: <span id="current-trait">-</span></p>
+
+    <p><strong>🧬 性格スコア:</strong></p>
+    <ul id="trait-scores"></ul>
+
+    <p><strong>💗 親愛度変化の詳細:</strong></p>
+    <ul>
+      <li>基礎増加量: <span id="base-delta">-</span></li>
+      <li>距離補正: <span id="distance-factor">-</span></li>
+      <li>セリフ補正: <span id="phrase-bonus">-</span></li>
+      <li>合計変化量: <span id="affection-delta">-</span></li>
+    </ul>
+  </div>
+
+  <div id="memory-info" style="padding: 1rem; background-color: #1a1a1a; border-top: 1px solid #444; font-size: 0.9rem;">
+    <p><strong>📌 長期記憶（ハッシュタグ）:</strong></p>
+    <ul id="hashtag-memories"></ul>
+
+    <p><strong>📖 長期記憶（ルールベース）:</strong></p>
+    <ul id="rule-memories"></ul>
+  </div>
+
+  <div id="trait-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background-color:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background-color:#222; padding:2rem; border-radius:12px; max-width:400px; text-align:center;">
+      <h3>性格を選んでください</h3>
+      <p>親愛度が上がったので、性格を選択できます！</p>
+      <div id="trait-options">
+        <button onclick="selectTrait('deredere')">デレデレ</button>
+        <button onclick="selectTrait('tsundere')">ツンデレ</button>
+        <button onclick="selectTrait('kuudere')">クーデレ</button>
+        <button onclick="selectTrait('yandere')">ヤンデレ</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatLog = document.getElementById("chat-log");
+    const userInput = document.getElementById("user-input");
+    const characterName = "{{ character.name }}";
+
+    function appendMessage(text, role) {
+      const div = document.createElement("div");
+      div.className = "message " + role;
+      div.textContent = text;
+      chatLog.appendChild(div);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+      appendMessage("あなた: " + message, "user");
+      userInput.value = "";
+
+      try {
+        const res = await fetch(`/chat/${encodeURIComponent(characterName)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await res.json();
+        appendMessage(`${characterName}: ${data.response}`, "ai");
+
+        document.getElementById("affection-label").textContent = `${data.affection} / 100`;
+        document.querySelector(".affection-bar-fill").style.width = `${data.affection}%`;
+        document.getElementById("trait-label").textContent = data.trait || "-";
+        document.getElementById("emotion-label").textContent = data.emotion || "-";
+        document.getElementById("emotion-score").textContent = (data.emotion_score !== undefined) ? data.emotion_score.toFixed(2) : "-";
+        document.getElementById("current-trait").textContent = data.trait || "-";
+
+        const list = document.getElementById("trait-scores");
+        list.innerHTML = "";
+        if (data.trait_scores) {
+          for (const [trait, value] of Object.entries(data.trait_scores)) {
+            const li = document.createElement("li");
+            li.textContent = `${trait}: ${value.toFixed(2)}`;
+            list.appendChild(li);
+          }
+        }
+
+        document.getElementById("base-delta").textContent = data.base_delta?.toFixed(2) ?? "-";
+        document.getElementById("distance-factor").textContent = data.distance_factor?.toFixed(2) ?? "-";
+        document.getElementById("phrase-bonus").textContent = data.phrase_bonus?.toFixed(2) ?? "-";
+        document.getElementById("affection-delta").textContent = data.affection_delta?.toFixed(2) ?? "-";
+
+        if (data.pending_trait_selection === true) {
+          document.getElementById("trait-modal").style.display = "flex";
+        }
+
+        if (data.memory_results && data.memory_results.length > 0) {
+          for (const item of data.memory_results) {
+            appendMessage(`🧠 記憶保存完了: ${item}`, "ai");
+          }
+        }
+
+      } catch (err) {
+        console.error(err);
+        appendMessage("⚠️ 通信エラーが発生しました", "ai");
+      }
+    }
+
+    async function selectTrait(trait) {
+      try {
+        const res = await fetch(`/select_trait/${encodeURIComponent(characterName)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trait })
+        });
+        if (res.ok) {
+          const result = await res.json();
+          document.getElementById("trait-label").textContent = result.new_trait;
+          document.getElementById("trait-modal").style.display = "none";
+          appendMessage(`🧬 性格が『${result.new_trait}』に設定されました！`, "ai");
+        } else {
+          appendMessage("⚠️ 性格の選択に失敗しました", "ai");
+        }
+      } catch (e) {
+        console.error(e);
+        appendMessage("⚠️ 通信エラーが発生しました（性格選択）", "ai");
+      }
+    }
+
+    async function loadMemoryInfo() {
+      try {
+        const res = await fetch(`/memory_info/${encodeURIComponent(characterName)}`);
+        const data = await res.json();
+
+        const hashtagList = document.getElementById("hashtag-memories");
+        hashtagList.innerHTML = "";
+        (data.hashtag_memories || []).forEach(tag => {
+          const li = document.createElement("li");
+          li.textContent = tag;
+          hashtagList.appendChild(li);
+        });
+
+        const ruleList = document.getElementById("rule-memories");
+        ruleList.innerHTML = "";
+        (data.rule_memories || []).forEach(item => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          ruleList.appendChild(li);
+        });
+      } catch (e) {
+        console.error("記憶情報の取得に失敗しました", e);
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", loadMemoryInfo);
+
+    userInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
+
