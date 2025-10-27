@@ -12,68 +12,65 @@
       color: #fff;
       margin: 0;
       padding: 0;
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      height: 100vh;
     }
+
     header {
       padding: 1rem;
       background-color: #1e1e1e;
       border-bottom: 1px solid #333;
       text-align: center;
     }
-    .chat-container {
+
+    .memory-sidebar {
+      width: 280px;
+      background-color: #1a1a1a;
+      padding: 1rem;
+      border-right: 1px solid #333;
+      overflow-y: auto;
+      font-size: 0.9rem;
+    }
+
+    .memory-sidebar h3 {
+      color: #f06292;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .memory-sidebar ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .memory-sidebar li {
+      margin-bottom: 0.6rem;
+      background-color: #2a2a2a;
+      padding: 0.5rem;
+      border-radius: 6px;
+      color: #fff;
+    }
+
+    .main-content {
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 1rem;
       overflow-y: auto;
     }
-    .message {
-      margin: 0.5rem 0;
-      padding: 0.7rem 1rem;
-      border-radius: 16px;
-      max-width: 70%;
-      word-break: break-word;
-    }
-    .user {
-      background-color: #4caf50;
-      color: white;
-      align-self: flex-end;
-    }
-    .ai {
-      background-color: #424242;
-      color: white;
-      align-self: flex-start;
-    }
-    .input-area {
+
+    .layout {
       display: flex;
-      padding: 1rem;
-      background-color: #1e1e1e;
-      border-top: 1px solid #333;
-    }
-    .input-area input {
       flex: 1;
-      padding: 0.8rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: none;
-      margin-right: 0.5rem;
+      overflow: hidden;
     }
-    .input-area button {
-      background-color: #f06292;
-      color: white;
-      border: none;
-      padding: 0.8rem 1.2rem;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
+
     .status-card {
       padding: 1rem;
       background-color: #222;
       border-bottom: 1px solid #333;
     }
+
     .affection-bar-wrapper {
       width: 100%;
       height: 12px;
@@ -83,24 +80,83 @@
       box-shadow: inset 0 0 3px #000;
       margin-top: 4px;
     }
+
     .affection-bar-fill {
       height: 100%;
       background: linear-gradient(to right, #ff6aa0, #ff9bd0);
       transition: width 0.3s ease;
     }
-    #debug-info {
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .message {
+      margin: 0.5rem 0;
+      padding: 0.7rem 1rem;
+      border-radius: 16px;
+      max-width: 70%;
+      word-break: break-word;
+    }
+
+    .user {
+      background-color: #4caf50;
+      color: white;
+      align-self: flex-end;
+    }
+
+    .ai {
+      background-color: #424242;
+      color: white;
+      align-self: flex-start;
+    }
+
+    .input-area {
+      display: flex;
+      padding: 1rem;
+      background-color: #1e1e1e;
+      border-top: 1px solid #333;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 0.8rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      margin-right: 0.5rem;
+    }
+
+    .input-area button {
+      background-color: #f06292;
+      color: white;
+      border: none;
+      padding: 0.8rem 1.2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #debug-info, #memory-info {
       padding: 1rem;
       background-color: #1a1a1a;
       border-top: 1px solid #444;
       font-size: 0.9rem;
     }
-    #debug-info ul {
+
+    #debug-info ul, #memory-info ul {
       list-style: none;
       padding-left: 0;
     }
-    #debug-info li {
+
+    #debug-info li, #memory-info li {
       margin-left: 1em;
     }
+
     #trait-modal button {
       margin: 0.5em;
       padding: 0.6em 1.2em;
@@ -118,45 +174,52 @@
     <h2>💬 {{ character.name }} とチャット</h2>
   </header>
 
-  <div class="status-card">
-    <p><strong>性格:</strong> <span id="trait-label">{{ character.current_trait }}</span></p>
-    <p><strong>親愛度:</strong> <span id="affection-label">{{ character.affection }} / 100</span></p>
-    <div class="affection-bar-wrapper">
-      <div class="affection-bar-fill" style="width: {{ character.affection }}%;"></div>
-    </div>
-  </div>
+  <div class="layout">
+    <aside class="memory-sidebar">
+      <h3>🧠 長期記憶ログ</h3>
+      <ul id="memory-log"></ul>
+    </aside>
 
-  <div class="chat-container" id="chat-log"></div>
+    <main class="main-content">
+      <div class="status-card">
+        <p><strong>性格:</strong> <span id="trait-label">{{ character.current_trait }}</span></p>
+        <p><strong>親愛度:</strong> <span id="affection-label">{{ character.affection }} / 100</span></p>
+        <div class="affection-bar-wrapper">
+          <div class="affection-bar-fill" style="width: {{ character.affection }}%;"></div>
+        </div>
+      </div>
 
-  <div class="input-area">
-    <input type="text" id="user-input" placeholder="メッセージを入力" autocomplete="off">
-    <button onclick="sendMessage()">送信</button>
-  </div>
+      <div class="chat-container" id="chat-log"></div>
 
-  <div id="debug-info">
-    <p><strong>🧠 感情分析</strong></p>
-    <p>感情: <span id="emotion-label">-</span></p>
-    <p>スコア: <span id="emotion-score">-</span></p>
-    <p>現在の性格: <span id="current-trait">-</span></p>
+      <div class="input-area">
+        <input type="text" id="user-input" placeholder="メッセージを入力" autocomplete="off">
+        <button onclick="sendMessage()">送信</button>
+      </div>
 
-    <p><strong>🧬 性格スコア:</strong></p>
-    <ul id="trait-scores"></ul>
+      <div id="debug-info">
+        <p><strong>🧠 感情分析</strong></p>
+        <p>感情: <span id="emotion-label">-</span></p>
+        <p>スコア: <span id="emotion-score">-</span></p>
+        <p>現在の性格: <span id="current-trait">-</span></p>
+        <p><strong>🧬 性格スコア:</strong></p>
+        <ul id="trait-scores"></ul>
 
-    <p><strong>💗 親愛度変化の詳細:</strong></p>
-    <ul>
-      <li>基礎増加量: <span id="base-delta">-</span></li>
-      <li>距離補正: <span id="distance-factor">-</span></li>
-      <li>セリフ補正: <span id="phrase-bonus">-</span></li>
-      <li>合計変化量: <span id="affection-delta">-</span></li>
-    </ul>
-  </div>
+        <p><strong>💗 親愛度変化の詳細:</strong></p>
+        <ul>
+          <li>基礎増加量: <span id="base-delta">-</span></li>
+          <li>距離補正: <span id="distance-factor">-</span></li>
+          <li>セリフ補正: <span id="phrase-bonus">-</span></li>
+          <li>合計変化量: <span id="affection-delta">-</span></li>
+        </ul>
+      </div>
 
-  <div id="memory-info" style="padding: 1rem; background-color: #1a1a1a; border-top: 1px solid #444; font-size: 0.9rem;">
-    <p><strong>📌 長期記憶（ハッシュタグ）:</strong></p>
-    <ul id="hashtag-memories"></ul>
-
-    <p><strong>📖 長期記憶（ルールベース）:</strong></p>
-    <ul id="rule-memories"></ul>
+      <div id="memory-info">
+        <p><strong>📌 長期記憶（ハッシュタグ）:</strong></p>
+        <ul id="hashtag-memories"></ul>
+        <p><strong>📖 長期記憶（ルールベース）:</strong></p>
+        <ul id="rule-memories"></ul>
+      </div>
+    </main>
   </div>
 
   <div id="trait-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background-color:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
@@ -183,6 +246,15 @@
       div.textContent = text;
       chatLog.appendChild(div);
       chatLog.scrollTop = chatLog.scrollHeight;
+
+      // 長期記憶ログ用
+      if (text.startsWith("🧠 記憶保存完了:")) {
+        const memoryLog = document.getElementById("memory-log");
+        const li = document.createElement("li");
+        li.textContent = text.replace("🧠 記憶保存完了:", "").trim();
+        memoryLog.appendChild(li);
+        memoryLog.scrollTop = memoryLog.scrollHeight;
+      }
     }
 
     async function sendMessage() {
